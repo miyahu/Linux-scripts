@@ -15,7 +15,7 @@ import requests
 import sys
 from collections import OrderedDict
 
-my_server = 'monnaiedeparis2.ecritel.net'
+my_server = 'pouet.ecritel.net'
 my_uri = 'eqs/ecritel/infos'
 
 ws_dict = OrderedDict()
