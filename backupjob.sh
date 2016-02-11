@@ -15,7 +15,7 @@
 # La sauvegarde quotidienne du 01 du mois en cours est copiée dans "month"
 
 
-srcdir="/var/log/apache2 /root /etc /home /var/www/www.ruedelafete.com"
+srcdir="/var/log/apache2 /root /etc /home /var/www/www.ru.com"
 backupdir=/opt/nfs/backupdir/$(/bin/date +%u)
 backup_month=/opt/nfs/backupdir/month
 mylog=/var/log/$(basename ${0/\.sh/}).log
