@@ -5,7 +5,7 @@ case "$*" in
 
 start)
 iptables -P INPUT DROP
-iptables -I INPUT -s 213.218.130.0/24 -j ACCEPT
+iptables -I INPUT -s 21.21.130.0/24 -j ACCEPT
 iptables -I INPUT -s 127.0.0.1 -j ACCEPT
 iptables -I INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
 ;;
