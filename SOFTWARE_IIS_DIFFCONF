@@ -1,0 +1,121 @@
+#!/usr/bin/env bash 
+
+#########################################################################################
+#La logique du script est la suivante :
+#les vhosts de vmc13 sont compares unitairement a leur equivalent sur les autres machines
+#########################################################################################
+
+_NAGIOS_STATUS_OK=0
+_NAGIOS_STATUS_WARNING=1
+_NAGIOS_STATUS_CRITICAL=2
+_NAGIOS_STATUS_UNKNOWN=3
+
+SERVER_LIST=""
+TMP_DIR=/tmp/VOYAGER_webconfig/
+SHARE_NAME=""
+_tr=/usr/bin/tr
+TMP_FILE=/tmp/$(basename $0)
+> $TMP_FILE
+
+for name in smbclient mkdir pwd grep xmldiff tee fping ; do
+         if type -ap $name &> /dev/null ; then
+                eval _$(echo $name | $_tr [a-z] [A-Z])=$name  
+	else
+		echo $name "non present" ; exit $_NAGIOS_STATUS_UNKNOWN
+        fi
+done
+
+check_host_connectivity() {
+	for host in $SERVER_LIST ; do
+		if ! $_FPING -q $host ; then
+			echo "NOK : host $host injoignable" ; exit $_NAGIOS_STATUS_UNKNOWN
+		fi 
+	done
+}
+
+create_target_directory() {
+	for nameserver in $SERVER_LIST ; do
+		for sharename in $SHARE_NAME ; do
+			if [ ! -d ${TMP_DIR}${nameserver}/${sharename}/ ] ; then
+				if ! $_MKDIR -p ${TMP_DIR}${nameserver}/${sharename}/ ; then 
+					echo "Impossible de creer le repertoire ${TMP_DIR}${nameserver}:${sharename}" ;
+					exit $_NAGIOS_STATUS_UNKNOWN
+				fi
+			fi
+		done
+	done
+}
+
+get_webconfig_file() {
+	for nameserver in $SERVER_LIST ; do
+		for sharename in $SHARE_NAME ; do
+			if ! cd ${nameserver}/${sharename}/ ; then
+				echo "impossible d'aller dans ${nameserver}/${sharename}/" ; 
+				exit $_NAGIOS_STATUS_UNKNOWN
+			fi
+ 			if ! $_SMBCLIENT -d 0 -A ~/.smbcred \\\\${nameserver}\\${sharename} \
+			-c 'recurse ; prompt ; get web.config' &> /dev/null ; then
+				echo "Impossible de recuperer le web.config de ${nameserver}:${sharename}" ;
+				exit $_NAGIOS_STATUS_UNKNOWN
+			fi
+			cd ../../
+		done
+	done
+}
+
+compare_configuration() {
+	#if (
+		# initialisation du tableau
+		mytab=()
+		for sharename in $SHARE_NAME ; do
+			for nameserver in $SERVER_LIST ; do
+				# on ajoute les chemins au tableau, classement par vhost (et non par serveur) 
+				mytab[${#mytab[*]}]=${nameserver}/${sharename}/web.config
+			done
+		done
+		# 
+		for i in {1..3} ; do
+			echo "comparaison de ${mytab[0]} avec ${mytab[$i]}" > $TMP_FILE
+			if ! $_XMLDIFF -c ${mytab[0]} ${mytab[$i]} >> $TMP_FILE ; then
+				echo "Difference de configuration detectee, merci d'intervenir" ;
+				exit $_NAGIOS_STATUS_CRITICAL
+			fi
+		done
+		# 
+		for i in {5..7} ; do
+			echo "comparaison de ${mytab[4]} avec ${mytab[$i]}" > $TMP_FILE
+			if ! $_XMLDIFF -c ${mytab[4]} ${mytab[$i]} >> $TMP_FILE ; then
+				echo "Difference de configuration detectee, merci d'intervenir" ;
+				exit $_NAGIOS_STATUS_CRITICAL
+			fi
+		done
+		# 
+		for i in {9..11} ; do
+			echo "comparaison de ${mytab[8]} avec ${mytab[$i]}" > $TMP_FILE
+			if ! $_XMLDIFF -c ${mytab[8]} ${mytab[$i]} >> $TMP_FILE ; then
+				echo "Difference de configuration detectee, merci d'intervenir" ;
+				exit $_NAGIOS_STATUS_CRITICAL
+			fi
+		done
+		#) ; then
+		echo "OK : la configuration des serveurs est identique" ; 
+	#fi
+		
+}
+
+## START ##
+
+create_target_directory
+
+check_host_connectivity
+
+cd $TMP_DIR
+if ! $_PWD | $_GREP -q ${TMP_DIR:0:22} ; then
+	echo "impossible d'entrer dans $TMP_DIR" ; exit $_NAGIOS_STATUS_UNKNOWN
+fi
+
+get_webconfig_file
+
+compare_configuration
+
+## END ##

@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+
+### BEGIN INIT INFO
+# Provides:          firewall
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Should-Start:      $named
+# Default-Start:     2 3 4 5
+# Default-Stop:      
+# Short-Description: firewall
+# Description:       firewall provides a secure use to the proxy
+### END INIT INFO
+
+
+_ipset=/usr/sbin/ipset 
+_iptables=/sbin/iptables
+
+case $1 in 
+
+start)
+
+### politique par defaut ###
+# on drop l'acces au proxy par defaut
+$_iptables -A INPUT -p tcp --dport 3128 -j DROP
+
+# ----
+
+### initialisation des sets ###
+# on cree le set af_stat 
+$_ipset -N af_stat iptree
+#$_ipset -N af_stat_net nethash 
+
+# ----
+
+### chargement des set aux valeurs initiales ###
+# si le backup du set af_dyn existe
+if [ -f /var/backups/set_af_stat.bak ] ; then
+		# on charge le charge
+		if $_ipset -R < /var/backups/set_af_stat.bak ; then
+			echo "Chargement du set af_dyn.bak"
+		else
+			for i in $(cat /etc/ip_statique_af) ; do
+		 		if [[  $i =~ "/" ]] ; then
+					continue ;
+				else
+			 		$_ipset -A af_stat $i ;
+		 		fi ;
+	 		done
+		fi
+fi
+
+## s'il existe, on charge le backup de af_stat ##
+# si le backup du set af_dyn existe 
+if  [ -f /var/backups/set_af_dyn.bak ] ; then
+		# on charge le charge
+		if $_ipset -R < /var/backups/set_af_dyn.bak ; then
+			echo "Chargement du set af_dyn.bak"
+		else
+			# on cree le set af_dyn avec un timeout de 172800 secondes (48 heures)
+			$_ipset -N af_dyn iptree --timeout 172800
+		fi
+fi
+
+# ----
+
+# on cree un regle matchant sur la chaine 'ltauth/register.php' et on l'associe au set af_dyn
+$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j SET --add-set af_dyn src
+
+# ----
+
+# on autorise les IP contenus dans le set af_dyn
+$_iptables -I INPUT -m set --match-set af_dyn src -j ACCEPT
+# on autorise les IP contenus dans le set af_stat
+$_iptables -I INPUT -m set --match-set af_stat src -j ACCEPT
+# on autorise les IP contenus dans le set af_dyn
+#$_iptables -I INPUT -m set --match-set af_stat_net src -j ACCEPT
+
+;;
+stop) 
+# sauvegarde des sets
+$_ipset -S af_stat > /var/backups/set_af_stat.bak
+$_ipset -S af_dyn > /var/backups/set_af_dyn.bak
+#$_ipset -S af_stat_net > /var/backups/set_af_stat_net.bak
+
+$_iptables -F
+$_ipset -F
+$_ipset -X af_dyn
+$_ipset -X af_stat
+
+;;
+restart) 
+$0 stop
+$0 start
+;;
+status)
+echo -e "------ regles IPTABLES -----\n\n" 
+$_iptables -S
+echo ""
+echo -e "------ regles IPSET -----\n\n" 
+$_ipset -L 
+echo "piper la sortie pour tout voir ex $0 status | most"
+;; 
+fullstatus)
+echo -e "------ regles IPTABLES -----\n\n" 
+$_iptables -L -n -v -x
+echo ""
+echo -e "------ regles IPSET -----\n\n" 
+$_ipset -L 
+;;
+*) 
+echo "Usage : start ou stop ou restart ou status ou fullstatus"
+
+esac
+
+
+# /sbin/$_iptables-restore < /etc/$_iptables.up.rules

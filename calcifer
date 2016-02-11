@@ -1,0 +1,83 @@
+#!/bin/bash -
+
+set -x
+
+mylogfile=/var/log/messages
+myoffsetfile=/tmp/offset.log
+mypath=/etc/init.d/
+myname=calcifer
+mydelay=10
+mylistname=af_ip
+_ipset=/usr/sbin/ipset
+_awk=/usr/bin/awk
+_grep=/usr/bin/grep
+_iptables=/sbin/iptables
+_logtail=/usr/sbin/logtail
+_mv=/bin/mv
+
+init_fw() {
+	if $_iptables -L -n | grep AFSRC ; then
+		$_iptables -D INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "AFSRC " ;
+	else
+		$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "AFSRC " ;
+	fi
+	if  $_iptables -L -n | grep af_ip ; then
+		$_iptables -D INPUT -m set --match-set $mylistname src -j ACCEPT ;
+	else
+		$_iptables -A INPUT -m set --match-set $mylistname src -j ACCEPT ;
+	fi
+}
+
+daemon_start() {
+	echo "Starting Daemon" ;
+	( while true ; do sleep 1 ; $0 find ; done ) & disown -h -ar $!
+}
+
+create_new_rules() {
+	if [ -z $($_ipset --list) ] ; then 
+		$_ipset -N $mylistname iptree --timeout $mydelay ;
+	fi
+	AFIP=$(logtail -o $myoffsetfile -f $mylogfile | grep AFSRC | awk -F"=" '{print$5}')
+	if [ ! -z ${AFIP/ DST/} ] ; then
+		for ip in $AFIP ; do
+			if [ ! $(ipset -T $mylistname ip) ] ; then
+				$_ipset -A $mylistname ip
+			fi
+		done
+	fi
+}
+
+		
+delete_rule() {
+	if [ $(ipset -T $mylistname ip) ] ; then
+		$_ipset -D $mylistname $1
+	fi
+}
+
+
+case "$*" in
+
+start)
+daemon_start
+;;
+
+stop)
+kill $(ps aux | grep [c]alcifer | awk '{print$2}')
+;;
+
+find)
+find_af_records
+;;
+
+updatefw)
+create_new_rules
+;;
+
+addrules)
+;;
+
+delrule)
+;;
+
+esac
+
