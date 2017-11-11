@@ -5,7 +5,7 @@ set -x
 mylogfile=/var/log/messages
 myoffsetfile=/tmp/offset.log
 mypath=/etc/init.d/
-myname=calcifer
+myname=jiji
 mydelay=10
 mylistname=af_ip
 _ipset=/usr/sbin/ipset
@@ -16,10 +16,10 @@ _logtail=/usr/sbin/logtail
 _mv=/bin/mv
 
 init_fw() {
-	if $_iptables -L -n | grep AFSRC ; then
-		$_iptables -D INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "AFSRC " ;
+	if $_iptables -L -n | grep SRC ; then
+		$_iptables -D INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "SRC " ;
 	else
-		$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "AFSRC " ;
+		$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j LOG --log-prefix "SRC " ;
 	fi
 	if  $_iptables -L -n | grep af_ip ; then
 		$_iptables -D INPUT -m set --match-set $mylistname src -j ACCEPT ;
@@ -37,7 +37,7 @@ create_new_rules() {
 	if [ -z $($_ipset --list) ] ; then 
 		$_ipset -N $mylistname iptree --timeout $mydelay ;
 	fi
-	AFIP=$(logtail -o $myoffsetfile -f $mylogfile | grep AFSRC | awk -F"=" '{print$5}')
+	AFIP=$(logtail -o $myoffsetfile -f $mylogfile | grep SRC | awk -F"=" '{print$5}')
 	if [ ! -z ${AFIP/ DST/} ] ; then
 		for ip in $AFIP ; do
 			if [ ! $(ipset -T $mylistname ip) ] ; then

@@ -33,11 +33,11 @@ $_ipset -N af_stat iptree
 # ----
 
 ### chargement des set aux valeurs initiales ###
-# si le backup du set af_dyn existe
+# si le backup du set dyn existe
 if [ -f /var/backups/set_af_stat.bak ] ; then
 		# on charge le charge
 		if $_ipset -R < /var/backups/set_af_stat.bak ; then
-			echo "Chargement du set af_dyn.bak"
+			echo "Chargement du set dyn.bak"
 		else
 			for i in $(cat /etc/ip_statique_af) ; do
 		 		if [[  $i =~ "/" ]] ; then
@@ -50,41 +50,41 @@ if [ -f /var/backups/set_af_stat.bak ] ; then
 fi
 
 ## s'il existe, on charge le backup de af_stat ##
-# si le backup du set af_dyn existe 
-if  [ -f /var/backups/set_af_dyn.bak ] ; then
+# si le backup du set dyn existe 
+if  [ -f /var/backups/set_dyn.bak ] ; then
 		# on charge le charge
-		if $_ipset -R < /var/backups/set_af_dyn.bak ; then
-			echo "Chargement du set af_dyn.bak"
+		if $_ipset -R < /var/backups/set_dyn.bak ; then
+			echo "Chargement du set dyn.bak"
 		else
-			# on cree le set af_dyn avec un timeout de 172800 secondes (48 heures)
-			$_ipset -N af_dyn iptree --timeout 172800
+			# on cree le set dyn avec un timeout de 172800 secondes (48 heures)
+			$_ipset -N dyn iptree --timeout 172800
 		fi
 fi
 
 # ----
 
-# on cree un regle matchant sur la chaine 'ltauth/register.php' et on l'associe au set af_dyn
-$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j SET --add-set af_dyn src
+# on cree un regle matchant sur la chaine 'ltauth/register.php' et on l'associe au set dyn
+$_iptables -I INPUT -p tcp --dport 80 -m string --from 0 --to 170 --algo bm --string 'ltauth/register.php' -j SET --add-set dyn src
 
 # ----
 
-# on autorise les IP contenus dans le set af_dyn
-$_iptables -I INPUT -m set --match-set af_dyn src -j ACCEPT
+# on autorise les IP contenus dans le set dyn
+$_iptables -I INPUT -m set --match-set dyn src -j ACCEPT
 # on autorise les IP contenus dans le set af_stat
 $_iptables -I INPUT -m set --match-set af_stat src -j ACCEPT
-# on autorise les IP contenus dans le set af_dyn
+# on autorise les IP contenus dans le set dyn
 #$_iptables -I INPUT -m set --match-set af_stat_net src -j ACCEPT
 
 ;;
 stop) 
 # sauvegarde des sets
 $_ipset -S af_stat > /var/backups/set_af_stat.bak
-$_ipset -S af_dyn > /var/backups/set_af_dyn.bak
+$_ipset -S dyn > /var/backups/set_dyn.bak
 #$_ipset -S af_stat_net > /var/backups/set_af_stat_net.bak
 
 $_iptables -F
 $_ipset -F
-$_ipset -X af_dyn
+$_ipset -X dyn
 $_ipset -X af_stat
 
 ;;

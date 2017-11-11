@@ -6,7 +6,7 @@ Serveur principal aa
 Serveur secondaire bb
 
 exemple ~# switch_server.sh primary all
-Associe dans le fichier /etc/hosts l'ip d'ETAI93 au nom de domaine sqlcluster.sim.lan
+Associe dans le fichier /etc/hosts l'ip d'ET3 au nom de domaine sqlcluster.sim.lan
 
 Option primary : insert primary server in  the hosts file 
 Option secondary : insert secondary server in  the hosts file 
@@ -46,12 +46,12 @@ local_restart_tomcat_function() {
 
 remote_restart_tomcat_function() {
 	if (( $MY_HOSTNAME == 103 )); then
-		if ! ssh -i /home/ecritel/.ssh/id_rsa ecritel@104 "sudo /usr/sbin/service tomcat6 restart" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa host@104 "sudo /usr/sbin/service tomcat6 restart" ; then
 			echo "NOK : Imposible de stopper $SERVICE_NAME sur , merci d'intervenir" ;
 			exit 2
 		fi
 	elif (( $MY_HOSTNAME == 104 )) ; then
-		if ! ssh -i /home/ecritel/.ssh/id_rsa ecritel@103 "sudo /usr/sbin/service tomcat6 restart" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa host@103 "sudo /usr/sbin/service tomcat6 restart" ; then
 			echo "NOK : Imposible de stopper $SERVICE_NAME sur , merci d'intervenir" ;
 			exit 2
 		fi
@@ -60,11 +60,11 @@ remote_restart_tomcat_function() {
 
 remote_change_hosts_function() {
 	if (( $MY_HOSTNAME == 103 )); then
-		if ! ssh -i /home/ecritel/.ssh/id_rsa ecritel@104 "sudo $SCRIPT_PATH $1 local" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa host@104 "sudo $SCRIPT_PATH $1 local" ; then
 			echo "NOK : Imposible de changer $SCRIPT_PATH sur 104, merci d'intervenir" ;
 		fi
 	elif (( $MY_HOSTNAME == 104 )) ; then
-		if ! ssh -i /home/ecritel/.ssh/id_rsa ecritel@103 "sudo $SCRIPT_PATH $1 local" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa host@103 "sudo $SCRIPT_PATH $1 local" ; then
 			echo "NOK : Imposible de changer $SCRIPT_PATH sur 103, merci d'intervenir" ;
 		fi
 	fi
@@ -112,13 +112,13 @@ change_hosts_function() {
 list_hosts_entry_function() {
 	if (( $MY_HOSTNAME == 103 )); then
 		echo "ETAI104"
-		if ! ssh -i /home/ecritel/.ssh/id_rsa 104 "grep sqlcluster.sim.lan /etc/hosts" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa 104 "grep sqlcluster.sim.lan /etc/hosts" ; then
 				echo "NOK : Imposible d'afficher le fichier $FILE_PATH, merci d'intervenir" ;
 				exit 3		
 		fi
 	elif (( $MY_HOSTNAME == 104 )) ; then
 		echo "ETAI103"
-		if ! ssh -i /home/ecritel/.ssh/id_rsa 103 "grep sqlcluster.sim.lan /etc/hosts" ; then
+		if ! ssh -i /home/host/.ssh/id_rsa 103 "grep sqlcluster.sim.lan /etc/hosts" ; then
 				echo "NOK : Impossible d'afficher le fichier $FILE_PATH, merci d'intervenir" ;
 				exit 3		
 		fi
