@@ -1,0 +1,65 @@
+#!/bin/bash -
+
+IF_ALIAS_NAME=eth0:www
+IF_ALIAS_ADDR="11.11.11.11/23"
+IF_ALIAS_LABEL=${IF_ALIAS_NAME/*:/}
+# insert service name with space between : "service1 service2"
+SERVICES="apache2"
+SCRIPT_NAME=$0
+
+[ $IFACE != $IF_ALIAS_NAME ] && exit 0
+
+set_addr() {
+    ip -o -4 -h add show label $IFACE | grep -v $IF_ALIAS_ADDR && ip addr add $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to set address $IF_ALIAS_ADDR on $IFACE" 
+}
+unset_addr() {
+    ip -o -4 -h add show label $IFACE | grep $IF_ALIAS_ADDR && ip addr del $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to unset address $IF_ALIAS_ADDR from $IFACE" 
+}
+
+start_service() {
+    if ! ping -qc 1 ${IF_ALIAS_ADDR/\/*/} ; then
+        if set_addr ; then
+            logger "$SCRIPT_NAME : setting ip address on $IFACE"
+            for svc in $SERVICES ; do
+                SERVICE_RC=$(service $svc status &> /dev/null ; echo $?)
+                if (( $SERVICE_RC < 4 )) ; then 
+                    if ! service $svc start &> /dev/null ; then
+                        logger "$SCRIPT_NAME : unable to start service $svc"
+                    fi
+                else
+                    logger "$SCRIPT_NAME : service $svc not installed"
+                fi
+            done
+        fi    
+    else
+        logger "$SCRIPT_NAME : $IF_ALIAS_ADDR already active"    
+    fi 
+}
+
+stop_service() {
+    if unset_addr ; then
+            for svc in $SERVICES ; do
+                if service $svc status &> /dev/null ; then 
+                    if ! service $svc stop &> /dev/null ; then
+                        logger "$SCRIPT_NAME : unable to stop service $svc"
+                    fi
+                else
+                    logger "$SCRIPT_NAME : service $svc not starting"
+                fi
+            done 
+    else
+        logger "$SCRIPT_NAME : unable to deactivate $IF_ALIAS_ADDR"    
+    fi 
+}
+
+case $MODE in 
+    start)
+        start_service
+        ;;
+    stop) 
+        stop_service
+        ;;
+    *)
+        echo "$SCRIPT_NAME : c'est pas compliqué, bordel de merde !!!"
+    ;;
+esac
