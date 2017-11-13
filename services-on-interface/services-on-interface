@@ -14,12 +14,12 @@ SCRIPT_NAME=$0
 [ $IFACE != $IF_ALIAS_NAME ] && exit 0
 
 set_addr() {
-    showif=$(ip -o -4 -h addr show label $IFACE &> /dev/null)
-    test -z $showif && ip addr add $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to set address $IF_ALIAS_ADDR on $IFACE"
+    showif=$(ip -o -4 -h addr show label $IFACE)
+    test -z "$showif" && ip addr add $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to set address $IF_ALIAS_ADDR on $IFACE"
 }
 unset_addr() {
-    showif=$(ip -o -4 -h addr show label $IFACE /dev/null)
-    ! test -z $showif && ip addr del $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to unset address $IF_ALIAS_ADDR on $IFACE"
+    showif=$(ip -o -4 -h addr show label $IFACE)
+    ! test -z "$showif" && ip addr del $IF_ALIAS_ADDR dev $IFACE label $IFACE || logger "$SCRIPT_NAME : unable to unset address $IF_ALIAS_ADDR on $IFACE"
 }
 
 start_service() {
