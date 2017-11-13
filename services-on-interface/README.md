@@ -1,9 +1,11 @@
-### services-on-interface
+# services-on-interface
 
-Features :
+### Features
 * activate service when interface becomes up
 * deactivate service when interface becomes down
 * stop when address ip is already active on network 
+
+### Installation and configuration
 
 1. add this following lines into the /etc/network/interfaces file's
 ```bash
